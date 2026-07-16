@@ -1,0 +1,12 @@
+name = "frame-backend"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+[[kv_namespaces]]
+binding = "FRAME_KV"
+
+[observability]
+enabled = true
+
+# 初回 deploy 時に FRAME_KV が自動作成され、IDがこのファイルへ追記されます。
+# 任意の書き込み保護: npx wrangler secret put WRITE_TOKEN

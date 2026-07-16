@@ -1,0 +1,13 @@
+{
+  "name":"FRAME Technical Decision Framework",
+  "short_name":"FRAME",
+  "description":"個別銘柄の時間軸・エントリー条件・無効化条件を整理するテクニカル分析アプリ",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#eef1f5",
+  "theme_color":"#0c1220",
+  "icons":[
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
