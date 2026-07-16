@@ -15,7 +15,10 @@ export async function mutatePlans(env,body={}){
       mode:['new','pullback','hold'].includes(body.mode)?body.mode:'new',
       status:String(body.status||body.entry_status||'WAIT'),entry_status:String(body.entry_status||body.status||'WAIT'),
       holding_status:String(body.holding_status||'HOLD'),diagnosis:body.diagnosis||null,
-      entry:body.entry||null,stop:body.stop||null,invalidation:body.invalidation||null,
+      entries:body.entries||previous?.entries||null,
+      entry:body.entry||body.entries?.standard||previous?.entry||null,
+      stop:body.stop||body.entries?.standard?.stop||previous?.stop||null,
+      invalidation:body.invalidation||null,
       checklist:Array.isArray(body.checklist)?body.checklist:[],
       memo:String(body.memo??previous?.memo??''),updated_at:now,created_at:previous?.created_at||now
     };

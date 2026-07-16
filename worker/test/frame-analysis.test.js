@@ -30,6 +30,21 @@ test('analyzes entry and holding separately',()=>{
   assert.ok(Number.isFinite(d.frames.daily.rsi14));
 });
 
+test('separates probe, standard and add levels',()=>{
+  const rows=series(),bench=series(520,100,.08);
+  const d=analyzeFrame({symbol:'TEST',name:'Test',market:'us',rows,benchmarkSymbol:'^SOX',benchmarkRows:bench,meta:{currency:'USD'}});
+  const e=d.setup.entries;
+  assert.ok(e.probe&&e.standard&&e.add);
+  assert.equal(e.probe.label,'打診');
+  assert.equal(e.standard.label,'標準');
+  assert.equal(e.add.label,'追加');
+  assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(e.probe.state));
+  assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(e.standard.state));
+  assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(e.add.state));
+  assert.equal(d.setup.entry.price,e.standard.price);
+  if(Number.isFinite(e.standard.price)&&Number.isFinite(e.add.price))assert.ok(e.add.price>=e.standard.price);
+});
+
 test('rejects insufficient history',()=>{
   assert.throws(()=>analyzeFrame({symbol:'X',rows:series(20),benchmarkRows:series(20)}),/不足/);
 });

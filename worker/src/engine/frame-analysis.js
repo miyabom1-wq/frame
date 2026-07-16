@@ -47,14 +47,25 @@ function trend(p,timeframe){
   return{code,label,score,above,slopes:{sma10:round(s10,4),sma25:round(s25,4),sma50:round(s50,4),sma200:round(s200,4)}};
 }
 
+function rangeStats(rows,i,period){
+  const prior=rows.slice(Math.max(0,i-period),i);
+  return{
+    high:prior.length?Math.max(...prior.map(x=>x.high)):null,
+    low:prior.length?Math.min(...prior.map(x=>x.low)):null
+  };
+}
+
 function frameSummary(rows,label){
   const p=prepare(rows),i=rows.length-1,row=rows[i]||{},t=trend(p,label),atr=p.atr14[i],rsi=p.rsi14[i];
-  const prior20=rows.slice(Math.max(0,i-20),i),high20=prior20.length?Math.max(...prior20.map(x=>x.high)):null,low20=prior20.length?Math.min(...prior20.map(x=>x.low)):null;
+  const r5=rangeStats(rows,i,5),r10=rangeStats(rows,i,10),r20=rangeStats(rows,i,20);
   return{
     timeframe:label,date:row.date||null,close:round(row.close,4),change_pct:i>0?round(pct(row.close,rows[i-1].close)):null,
     trend:t,rsi14:round(rsi,2),atr14:round(atr,4),atr_pct:finite(atr)&&finite(row.close)?round(atr/row.close*100,2):null,
-    sma5:round(p.sma5[i],4),sma25:round(p.sma25[i],4),sma50:round(p.sma50[i],4),sma200:round(p.sma200[i],4),ema65:round(p.ema65[i],4),
-    high20:round(high20,4),low20:round(low20,4),distance_high20:finite(high20)?round(pct(row.close,high20)):null,distance_low20:finite(low20)?round(pct(row.close,low20)):null
+    sma5:round(p.sma5[i],4),sma25:round(p.sma25[i],4),sma50:round(p.sma50[i],4),sma200:round(p.sma200[i],4),
+    ema21:round(p.ema21[i],4),ema65:round(p.ema65[i],4),
+    high5:round(r5.high,4),low5:round(r5.low,4),high10:round(r10.high,4),low10:round(r10.low,4),
+    high20:round(r20.high,4),low20:round(r20.low,4),
+    distance_high20:finite(r20.high)?round(pct(row.close,r20.high)):null,distance_low20:finite(r20.low)?round(pct(row.close,r20.low)):null
   };
 }
 
@@ -88,7 +99,7 @@ function entryChecklist({daily,weekly,monthly,volume,rs}){
     {key:'weekly',label:'週足が上向き',pass:weekly.trend.score>0,actual:weekly.trend.label},
     {key:'daily',label:'日足が上向き',pass:daily.trend.score>0,actual:daily.trend.label},
     {key:'ema65',label:'終値がEMA65より上',pass:finite(c)&&finite(daily.ema65)&&c>daily.ema65,actual:finite(daily.ema65)?round(pct(c,daily.ema65),1)+'%':'—'},
-    {key:'high20',label:'20日高値から2.5%以内',pass:finite(daily.distance_high20)&&daily.distance_high20>=-2.5,actual:finite(daily.distance_high20)?daily.distance_high20+'%':'—'},
+    {key:'high20',label:'20日高値から2.5%以内（追加条件）',pass:finite(daily.distance_high20)&&daily.distance_high20>=-2.5,actual:finite(daily.distance_high20)?daily.distance_high20+'%':'—'},
     {key:'volume',label:'出来高比1.2以上',pass:finite(volume.ratio)&&volume.ratio>=1.2,actual:finite(volume.ratio)?volume.ratio+'x':'—'},
     {key:'relative',label:'20日相対強度がプラス',pass:finite(rs.rs20)&&rs.rs20>0,actual:finite(rs.rs20)?rs.rs20+'%':'—'},
     {key:'rsi',label:'RSIが過熱域未満',pass:!finite(daily.rsi14)||daily.rsi14<75,actual:finite(daily.rsi14)?daily.rsi14:'—'}
@@ -121,37 +132,94 @@ function holdingState({daily,weekly,monthly,rs}){
   };
 }
 
+function nearestOverhead(current,values){
+  const xs=values.filter(finite).map(Number);
+  if(!xs.length)return null;
+  const above=xs.filter(x=>x>Number(current)*1.001).sort((a,b)=>a-b);
+  return above.length?above[0]:Math.max(...xs);
+}
+
+function stageState({price,current,readyPct,triggered,invalid}){
+  if(invalid)return'INVALID';
+  if(triggered)return'TRIGGERED';
+  if(!finite(price)||!finite(current))return'WAIT';
+  const distance=pct(price,current);
+  return finite(distance)&&distance<=readyPct?'READY':'WAIT';
+}
+
+function entryStages({daily,weekly,monthly,volume,rs}){
+  const c=Number(daily.close),invalid=daily.trend.code==='DOWN'&&weekly.trend.score<0;
+  const longStructure=monthly.trend.score>=0&&weekly.trend.score>=0;
+  const rsTurning=finite(rs.rs5)&&(rs.rs5>0||!finite(rs.rs20)||rs.rs5>rs.rs20);
+  const volumeOkay=!finite(volume.ratio)||volume.ratio>=.8;
+  const probePrice=nearestOverhead(c,[daily.sma5,daily.ema21,daily.high5]);
+  let standardPrice=nearestOverhead(c,[daily.ema65,daily.sma25,daily.high10]);
+  if(finite(probePrice)&&finite(standardPrice)&&standardPrice<probePrice)standardPrice=probePrice;
+  let addPrice=finite(daily.high20)?Number(daily.high20):null;
+  if(finite(standardPrice)&&finite(addPrice)&&addPrice<standardPrice)addPrice=standardPrice;
+
+  const probeTriggered=longStructure&&finite(probePrice)&&c>=probePrice&&rsTurning&&daily.rsi14<70;
+  const standardTriggered=weekly.trend.score>0&&finite(standardPrice)&&c>=standardPrice&&rsTurning&&volumeOkay&&daily.rsi14<75;
+  const addTriggered=weekly.trend.score>0&&daily.trend.score>0&&finite(addPrice)&&c>=addPrice&&finite(volume.ratio)&&volume.ratio>=1.2&&finite(rs.rs20)&&rs.rs20>0;
+
+  const probeStop=[daily.low5,daily.low10].filter(finite);
+  const standardStop=[daily.low10,daily.low20,daily.sma50].filter(x=>finite(x)&&x<c);
+  const addStop=[daily.low10,daily.ema21,daily.sma25].filter(x=>finite(x)&&x<c);
+
+  const probe={
+    key:'probe',label:'打診',price:round(probePrice,4),
+    state:stageState({price:probePrice,current:c,readyPct:4,triggered:probeTriggered,invalid}),
+    size:'予定サイズの1/3以下',
+    rule:'終値で5日線・EMA21・短期戻り高値のうち最初の水準を回復し、5日相対強度の改善を確認',
+    stop:{price:round(probeStop.length?Math.max(...probeStop):daily.low10,4),rule:'直近5〜10日安値を終値で割れたら打診を撤回'}
+  };
+  const standard={
+    key:'standard',label:'標準',price:round(standardPrice,4),
+    state:stageState({price:standardPrice,current:c,readyPct:7,triggered:standardTriggered,invalid}),
+    size:'中心ポジション',
+    rule:'EMA65・25日線・10日戻り高値のうち次の主要水準を終値で回復し、短期相対強度と出来高の改善を確認',
+    stop:{price:round(standardStop.length?Math.max(...standardStop):daily.low20,4),rule:'10〜20日安値または50日線を終値で明確に割れたら再評価'}
+  };
+  const add={
+    key:'add',label:'追加',price:round(addPrice,4),
+    state:stageState({price:addPrice,current:c,readyPct:2.5,triggered:addTriggered,invalid}),
+    size:'モメンタム確認後の追加',
+    rule:'20日高値を終値で突破し、出来高比1.2以上・20日相対強度プラスを確認',
+    stop:{price:round(addStop.length?Math.max(...addStop):daily.low10,4),rule:'突破後に10日安値または短期線を終値で割れたら追加分を再評価'}
+  };
+  return{probe,standard,add};
+}
+
 function setupState({daily,weekly,monthly,volume,rs}){
   const checklist=entryChecklist({daily,weekly,monthly,volume,rs});
+  const entries=entryStages({daily,weekly,monthly,volume,rs});
   const reasons=[],risks=[];let status='WAIT';
-  const c=daily.close,ema=daily.ema65,rsi=daily.rsi14,vr=volume.ratio;
-  const multi=monthly.trend.score+weekly.trend.score+daily.trend.score;
-  const nearEma=finite(c)&&finite(ema)&&Math.abs(pct(c,ema))<=2.5;
-  const nearBreak=finite(daily.high20)&&finite(c)&&pct(c,daily.high20)>=-2.5;
-  const invalid=daily.trend.code==='DOWN'&&weekly.trend.score<0;
-  const required=checklist.filter(x=>['weekly','daily','high20','volume','relative','rsi'].includes(x.key));
-  if(invalid){status='INVALID';risks.push('日足・週足がともに下降');}
-  else if(required.every(x=>x.pass)){
-    status='TRIGGERED';reasons.push('日足・週足が上向き','20日高値圏','出来高増加','指数に対して優位');
-  }else if(multi>=2&&(nearEma||nearBreak)&&(!finite(rsi)||rsi<75)){
-    status='READY';reasons.push('上位足の方向が改善','EMA65または20日高値に接近');
-    if(finite(rs.rs20)&&rs.rs20<0)risks.push('指数に対する相対強度は未改善');
-    if(finite(vr)&&vr<1)risks.push('出来高の裏付けが弱い');
+  const invalid=entries.standard.state==='INVALID';
+  if(invalid){
+    status='INVALID';risks.push('日足・週足がともに下降');
+  }else if(entries.add.state==='TRIGGERED'||entries.standard.state==='TRIGGERED'){
+    status='TRIGGERED';
+    if(entries.standard.state==='TRIGGERED')reasons.push('標準エントリー条件が成立');
+    if(entries.add.state==='TRIGGERED')reasons.push('高値突破の追加条件が成立');
+  }else if(['READY','TRIGGERED'].includes(entries.probe.state)||entries.standard.state==='READY'||entries.add.state==='READY'){
+    status='READY';
+    if(entries.probe.state==='TRIGGERED')reasons.push('打診条件が成立');
+    else if(entries.probe.state==='READY')reasons.push('打診水準へ接近');
+    if(entries.standard.state==='READY')reasons.push('標準エントリー水準へ接近');
+    if(entries.add.state==='READY')reasons.push('追加ブレイク水準へ接近');
   }else{
     reasons.push('条件待ち');
-    if(weekly.trend.score<0)risks.push('週足が下降または移行局面');
-    if(finite(rs.rs20)&&rs.rs20<0)risks.push('指数に劣後');
   }
-  const triggerCandidates=[daily.high20,daily.ema65,daily.sma25].filter(finite);
-  const trigger=triggerCandidates.length?Math.max(...triggerCandidates):null;
-  const structuralStop=[daily.low20,daily.sma50].filter(finite),eligibleStop=structuralStop.filter(x=>x<c);
-  const stop=eligibleStop.length?Math.max(...eligibleStop):(finite(daily.low20)?daily.low20:null);
+  if(weekly.trend.score<0)risks.push('週足が下降または移行局面');
+  if(finite(rs.rs20)&&rs.rs20<0)risks.push('20日では指数に劣後');
+  if(finite(volume.ratio)&&volume.ratio<1)risks.push('出来高の裏付けが弱い');
+  const standardStop=entries.standard.stop;
   return{
-    status,reasons,risks,checklist,
+    status,reasons,risks,checklist,entries,
     progress:{passed:checklist.filter(x=>x.pass).length,total:checklist.length},
-    entry:{price:round(trigger,4),rule:'終値でトリガー水準を回復し、出来高比1.2以上を確認'},
-    stop:{price:round(stop,4),rule:'直近20日安値または50日線を終値で明確に割れたら再評価'},
-    add_rule:'週足短期線回復かつ相対強度20日がプラスを維持',
+    entry:entries.standard,
+    stop:standardStop,
+    add_rule:entries.add.rule,
     invalidation:'週足安値更新、または日足・週足がともに下降トレンドへ移行'
   };
 }
@@ -173,6 +241,6 @@ export function analyzeFrame({symbol,name,market,rows,benchmarkSymbol,benchmarkR
     benchmark:benchmarkSymbol,updated_at:new Date().toISOString(),diagnosis,score:round(score,1),status:setup.status,
     entry_status:setup.status,holding_status:holding.status,holding,
     frames:{monthly,weekly,daily},volume,relative_strength:rs,setup,chart:chartRows(rows),
-    methodology:'月足・週足・日足の構造、EMA65、25/50/200日線、RSI14、ATR14、5/20/60日相対強度、20日出来高比を統合。新規エントリーと既存保有を分離し、売買注文は送信しません。'
+    methodology:'月足・週足・日足、EMA21/65、25/50/200日線、RSI14、ATR14、5/20/60日相対強度、20日出来高比を統合。打診・標準・追加を分け、最高値突破だけを初回エントリー条件にはしません。'
   };
 }
