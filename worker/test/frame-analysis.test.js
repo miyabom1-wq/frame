@@ -12,14 +12,20 @@ function series(n=520,start=100,step=.18){
   }
   return out;
 }
-test('analyzes multi-timeframe structure',()=>{
+
+test('analyzes entry and holding separately',()=>{
   const rows=series(),bench=series(520,100,.08);
   const d=analyzeFrame({symbol:'TEST',name:'Test',market:'us',rows,benchmarkSymbol:'^SOX',benchmarkRows:bench,meta:{currency:'USD'}});
   assert.equal(d.ok,true);
   assert.equal(d.frames.daily.timeframe,'日足');
   assert.equal(d.frames.weekly.timeframe,'週足');
   assert.equal(d.frames.monthly.timeframe,'月足');
-  assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(d.status));
+  assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(d.entry_status));
+  assert.ok(['HOLD','CAUTION','REVIEW'].includes(d.holding_status));
+  assert.equal(d.setup.checklist.length,8);
+  assert.equal(d.setup.progress.total,8);
+  assert.ok('rs5' in d.relative_strength);
+  assert.ok('rs60' in d.relative_strength);
   assert.ok(d.chart.length<=120);
   assert.ok(Number.isFinite(d.frames.daily.rsi14));
 });

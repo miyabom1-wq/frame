@@ -18,6 +18,6 @@ test('analyze route integrates fetch normalization and engine',async()=>{
   globalThis.fetch=async url=>new Response(JSON.stringify(String(url).includes('%5ESOX')?yahoo('SOX',.1):yahoo('MU',.25)),{status:200,headers:{'content-type':'application/json'}});
   try{
     const r=await route(new Request('https://x/api/analyze?market=us&symbol=MU'),{});assert.equal(r.status,200);
-    const d=await r.json();assert.equal(d.ok,true);assert.equal(d.symbol,'MU');assert.equal(d.benchmark,'^SOX');assert.ok(d.frames.daily);assert.ok(d.setup.entry);
+    const d=await r.json();assert.equal(d.ok,true);assert.equal(d.symbol,'MU');assert.equal(d.benchmark,'^SOX');assert.ok(d.frames.daily);assert.ok(d.setup.entry);assert.ok(d.holding);assert.equal(d.setup.checklist.length,8);
   }finally{globalThis.fetch=old}
 });

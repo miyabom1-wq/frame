@@ -1,36 +1,25 @@
-# FRAME v0.1.0 検証結果
+# FRAME v0.2.0 検証レポート
 
-実施日: 2026-07-17
+検証日: 2026-07-17
 
-## 完了
+## 合格
 
-- Worker JavaScript構文チェック
-- フロントエンドJavaScript構文チェック
-- manifest.json / package.json / package-lock.json解析
-- 月足・週足・日足集約テスト
-- RSI14 / ATR14算出を含む分析テスト
-- WAIT / READY / TRIGGERED / INVALIDの出力形式確認
-- 価格履歴不足時のエラー確認
-- プラン保存・削除テスト
-- APIルート統合テスト（Yahooレスポンスを模擬）
-- `/api/health` ローカルWorker確認
-- VANTAGEと別Worker名 `frame-backend`
-- VANTAGEと別KV binding `FRAME_KV`
-- VANTAGEファイルへの変更なし
+- Node.js構文確認
+- 分析エンジンテスト
+- 新規判定と保有判定の分離テスト
+- 5・20・60日相対強度テスト
+- 条件チェック8項目テスト
+- KVプラン保存・メモ更新・削除テスト
+- API統合テスト
+- Cloudflare Worker dry-run
+- package-lock内の内部npm URLが0件であることを確認
 
-## 自動テスト
+## テスト結果
 
-```text
-5 tests passed
-0 failed
-```
+- tests: 5
+- pass: 5
+- fail: 0
 
-## デプロイ後に確認する項目
+## 注意
 
-- Yahoo Financeから実銘柄を取得できること
-- Worker URLの `/api/health`
-- 日本株コードの `.T` 自動補完
-- GitHub Pagesからのプラン保存
-- PWAインストール
-
-ローカルWorkerは実行環境のDNS制限によりYahooへの外部接続だけ確認できませんでした。Yahooレスポンスを模擬した統合テストは通過しています。実通信はCloudflareへデプロイ後に確認します。
+Yahoo Financeへの実通信は本番Workerで確認します。FRAMEは自動売買を行いません。

@@ -9,11 +9,15 @@ export async function mutatePlans(env,body={}){
     const market=body.market==='jp'?'jp':'us',symbol=normalizeSymbol(body.symbol,market);
     if(!symbol)throw new Error('symbol required');
     const now=nowIso(),id=body.id||`${market}:${symbol}`;
+    const previous=plans.find(x=>x.id===id);
     const item={
-      id,market,symbol,name:String(body.name||symbol),status:String(body.status||'WAIT'),
-      diagnosis:body.diagnosis||null,entry:body.entry||null,stop:body.stop||null,
-      invalidation:body.invalidation||null,memo:String(body.memo||''),updated_at:now,
-      created_at:plans.find(x=>x.id===id)?.created_at||now
+      id,market,symbol,name:String(body.name||symbol),
+      mode:['new','pullback','hold'].includes(body.mode)?body.mode:'new',
+      status:String(body.status||body.entry_status||'WAIT'),entry_status:String(body.entry_status||body.status||'WAIT'),
+      holding_status:String(body.holding_status||'HOLD'),diagnosis:body.diagnosis||null,
+      entry:body.entry||null,stop:body.stop||null,invalidation:body.invalidation||null,
+      checklist:Array.isArray(body.checklist)?body.checklist:[],
+      memo:String(body.memo??previous?.memo??''),updated_at:now,created_at:previous?.created_at||now
     };
     const next=[item,...plans.filter(x=>x.id!==id)];
     await write(env,next);return{ok:true,item,plans:next};
@@ -23,7 +27,8 @@ export async function mutatePlans(env,body={}){
   }
   if(action==='memo'){
     const idx=plans.findIndex(x=>x.id===body.id);if(idx<0)throw new Error('plan not found');
-    plans[idx]={...plans[idx],memo:String(body.memo||''),updated_at:nowIso()};await write(env,plans);return{ok:true,item:plans[idx]};
+    plans[idx]={...plans[idx],memo:String(body.memo||''),mode:['new','pullback','hold'].includes(body.mode)?body.mode:plans[idx].mode,updated_at:nowIso()};
+    await write(env,plans);return{ok:true,item:plans[idx]};
   }
   throw new Error('unsupported action');
 }
