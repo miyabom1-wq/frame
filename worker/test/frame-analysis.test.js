@@ -13,7 +13,22 @@ function series(n=520,start=100,step=.18){
   return out;
 }
 
-test('analyzes entry and holding separately',()=>{
+function damagedSeries(){
+  const out=series(520,100,.35).map(x=>({...x}));
+  let p=out.at(-19).close;
+  for(let i=out.length-18;i<out.length;i++){
+    p*=i<out.length-5?.982:1.004;
+    const j=i-(out.length-18);
+    out[i]={...out[i],open:p*1.006,high:p*1.015,low:p*.982,close:p,volume:1500000+j*35000};
+  }
+  return out;
+}
+
+function fallingSeries(){
+  return series(520,300,-.22).map((x,i)=>({...x,volume:1200000+(i%12)*40000}));
+}
+
+test('analyzes entry, holding and phase separately',()=>{
   const rows=series(),bench=series(520,100,.08);
   const d=analyzeFrame({symbol:'TEST',name:'Test',market:'us',rows,benchmarkSymbol:'^SOX',benchmarkRows:bench,meta:{currency:'USD'}});
   assert.equal(d.ok,true);
@@ -22,8 +37,11 @@ test('analyzes entry and holding separately',()=>{
   assert.equal(d.frames.monthly.timeframe,'月足');
   assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(d.entry_status));
   assert.ok(['HOLD','CAUTION','REVIEW'].includes(d.holding_status));
+  assert.ok(['MOMENTUM_START','ADVANCE','PULLBACK','BASE','DISTRIBUTION','REPAIR','BREAKDOWN','TRANSITION'].includes(d.phase.code));
   assert.equal(d.setup.checklist.length,8);
   assert.equal(d.setup.progress.total,8);
+  assert.ok('drawdown60' in d.phase.metrics);
+  assert.ok('distribution_days' in d.phase.metrics);
   assert.ok('rs5' in d.relative_strength);
   assert.ok('rs60' in d.relative_strength);
   assert.ok(d.chart.length<=120);
@@ -43,6 +61,22 @@ test('separates probe, standard and add levels',()=>{
   assert.ok(['WAIT','READY','TRIGGERED','INVALID'].includes(e.add.state));
   assert.equal(d.setup.entry.price,e.standard.price);
   if(Number.isFinite(e.standard.price)&&Number.isFinite(e.add.price))assert.ok(e.add.price>=e.standard.price);
+});
+
+test('classifies a damaged long-term uptrend as repair and holding caution',()=>{
+  const rows=damagedSeries(),bench=series(520,100,.1);
+  const d=analyzeFrame({symbol:'DAMAGE',name:'Damage',market:'us',rows,benchmarkSymbol:'^SOX',benchmarkRows:bench});
+  assert.equal(d.phase.code,'REPAIR');
+  assert.equal(d.holding_status,'CAUTION');
+  assert.ok(d.phase.metrics.drawdown60<=-15);
+});
+
+test('classifies multi-timeframe decline as breakdown and review',()=>{
+  const rows=fallingSeries(),bench=series(520,100,.05);
+  const d=analyzeFrame({symbol:'DOWN',name:'Down',market:'us',rows,benchmarkSymbol:'^SOX',benchmarkRows:bench});
+  assert.equal(d.phase.code,'BREAKDOWN');
+  assert.equal(d.holding_status,'REVIEW');
+  assert.equal(d.entry_status,'INVALID');
 });
 
 test('rejects insufficient history',()=>{
