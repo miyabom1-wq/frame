@@ -2,6 +2,13 @@ import { nowIso, parseJson, normalizeSymbol } from '../utils.js';
 const KEY='frame:plans:v1';
 async function read(env){return parseJson(await env.FRAME_KV.get(KEY),[])||[];}
 async function write(env,plans){await env.FRAME_KV.put(KEY,JSON.stringify(plans));return plans;}
+function contextText(v,n=120){return String(v??'').trim().slice(0,n);}
+function normalizeSourceContext(v){
+  if(!v||String(v.source||'').toUpperCase()!=='VANTAGE')return null;
+  const number=x=>x==null||String(x).trim()===''?null:(Number.isFinite(Number(x))?Number(x):null);
+  return{source:'VANTAGE',market:v.market==='jp'?'jp':'us',symbol:contextText(v.symbol,32),name:contextText(v.name,100),theme:contextText(v.theme,80),theme_phase:contextText(v.theme_phase,40),theme_code:contextText(v.theme_code,40),propagation:contextText(v.propagation,60),lane:contextText(v.lane,8),lane_label:contextText(v.lane_label,80),risk:contextText(v.risk,80),scope:contextText(v.scope,20),from:contextText(v.from,30),setup:contextText(v.setup,80),trade_date:contextText(v.trade_date,20),rs5:number(v.rs5),rs20:number(v.rs20),vol_ratio:number(v.vol_ratio)};
+}
+
 export async function getPlans(env){return{ok:true,plans:await read(env)};}
 export async function mutatePlans(env,body={}){
   const plans=await read(env),action=body.action;
@@ -16,6 +23,7 @@ export async function mutatePlans(env,body={}){
       status:String(body.status||body.entry_status||'WAIT'),entry_status:String(body.entry_status||body.status||'WAIT'),
       holding_status:String(body.holding_status||'HOLD'),diagnosis:body.diagnosis||null,
       phase:body.phase||previous?.phase||null,
+      source_context:body.source_context===null?null:(normalizeSourceContext(body.source_context)||previous?.source_context||null),
       entries:body.entries||previous?.entries||null,
       entry:body.entry||body.entries?.standard||previous?.entry||null,
       stop:body.stop||body.entries?.standard?.stop||previous?.stop||null,
