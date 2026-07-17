@@ -1,4 +1,4 @@
-# FRAME 使い方 v0.5.0
+# FRAME 使い方 v0.6.0
 
 ## FRAMEの役割
 
