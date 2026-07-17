@@ -1,55 +1,16 @@
-# FRAME UI v0.10
+# FRAME UI v0.12 — VANTAGE信用需給連携
 
-- アイコン画像の外周に入っていた明色背景を除去し、全面チャコール背景へ変更。
-- Android用maskable 192/512を追加。
-- v0.9までの株価・騰落率・価格時刻、日本語銘柄名の引き継ぎをすべて同梱。
+- VANTAGE v47から日本株の信用需給を引き継ぎ。
+- 需給評価、信用倍率、買残、前週変化、買残回転日数、基準日、注意・規制フラグを表示。
+- 信用需給はFRAMEの局面・3段階エントリーを上書きせず、サイズと追加判断の注意情報として表示。
+- 信用取引規制または特別周知を受け取った場合、「追加停止」を明示。
+- PWAのアプリIDを `./` に固定し、スマホのインストール判定を修正。
+- ヘッダーにインストールボタンを追加。
+- v0.10のアイコン、株価・騰落率・価格時刻、日本語名引き継ぎを維持。
 
----
+## 変更しないもの
 
-# FRAME v0.8.0
-
-- VANTAGEから渡された日本株の日本語銘柄名を分析画面・保存プラン・コピー文へ反映
-- RS表記を「市場差RS」へ統一
-- チャコール、ブルー、アンバーのワークベンチ表現を強化し、VANTAGEと一目で区別可能に改善
-- 分析エンジン、売買水準、保存データ形式はv0.7から変更なし
-
-# FRAME v0.7.0
-
-- 銘柄・モード → 局面 → 打診・標準・追加 → プラン保存の操作順を常時表示
-- ヘッダーにクイックガイドを追加
-- 初期画面を具体的な操作案内へ変更
-- 設定画面にAPI接続状態を追加
-- 新規状態を「条件成立・接近／準備・待機・無効」へ日本語化
-- 設定とガイドに明確な×ボタンを追加
-- Enter分析、Escで閉じる、フォーカス表示、スマホ表示を改善
-- 分析ロジック、保存プラン、VANTAGE連携は変更なし
-
-# FRAME v0.6.0
-
-- VANTAGEと共通のデザインシステムへ刷新
-- セットアップ・プラン・ルールのタブ名称とアイコンを統一
-- PWAアイコンをフレーム／転換点デザインへ変更
-
-# FRAME v0.5.0
-
-- VANTAGEから市場・テーマ・伝播・候補レーンを引き継ぎ
-- VANTAGE文脈とFRAMEテクニカル判定を分離
-- 保存プランへ出所情報を保存
-
-# FRAME v0.4.0
-
-- モメンタム初動、上昇継続、健全な押し目、ベース、分配警戒、修復、崩壊、移行待ちの局面分類
-- 保有判定をHOLD・CAUTION・REVIEWに分離
-
-# FRAME v0.3.0
-
-- 打診・標準・追加の3段階エントリー
-
-
-## UI v0.9 — Current quote context
-
-- The analysis header shows the latest fetched price, daily change, and acquisition time.
-- VANTAGE handoff shows its quote immediately before FRAME finishes the independent analysis.
-- The quote panel includes a visible refresh button.
-- Intraday values are labeled as delayed reference values.
-- The Worker analysis response now includes normalized quote metadata; the technical engine is unchanged.
+- FRAME Workerの分析エンジン
+- 打診・標準・追加の価格計算
+- 保存済みプランの形式
+- VANTAGEを経由せず直接分析した場合の挙動
