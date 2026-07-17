@@ -1,11 +1,11 @@
 {
-  "name": "FRAME",
+  "name": "FRAME — Technical Decision Workbench",
   "short_name": "FRAME",
   "description": "VANTAGE候補を受け取り、個別銘柄の局面・段階エントリー・無効化条件を整理",
-  "start_url": "./?v=0.7",
+  "start_url": "./?v=0.8",
   "display": "standalone",
-  "background_color": "#f2f5f8",
-  "theme_color": "#182233",
+  "background_color": "#eef2f6",
+  "theme_color": "#111b2b",
   "icons": [
     {
       "src": "icon-192.png",
@@ -17,5 +17,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "id": "frame-v0.8"
 }
