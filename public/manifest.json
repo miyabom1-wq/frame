@@ -2,7 +2,7 @@
   "name": "FRAME",
   "short_name": "FRAME",
   "description": "VANTAGE候補を受け取り、個別銘柄の局面・段階エントリー・無効化条件を整理",
-  "start_url": "./?v=0.6",
+  "start_url": "./?v=0.7",
   "display": "standalone",
   "background_color": "#f2f5f8",
   "theme_color": "#182233",
