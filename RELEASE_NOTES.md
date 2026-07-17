@@ -36,3 +36,12 @@
 # FRAME v0.3.0
 
 - 打診・標準・追加の3段階エントリー
+
+
+## UI v0.9 — Current quote context
+
+- The analysis header shows the latest fetched price, daily change, and acquisition time.
+- VANTAGE handoff shows its quote immediately before FRAME finishes the independent analysis.
+- The quote panel includes a visible refresh button.
+- Intraday values are labeled as delayed reference values.
+- The Worker analysis response now includes normalized quote metadata; the technical engine is unchanged.

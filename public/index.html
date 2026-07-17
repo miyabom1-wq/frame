@@ -36,11 +36,20 @@ header::after{content:"";position:absolute;right:-24px;top:-42px;width:156px;hei
 .name-source-note{display:inline-block;margin-top:4px;font-size:10px;color:#758195}
 @media(max-width:650px){header::after{right:-57px}.app-role-badge{display:none}}
 </style>
+
+<style id="quote-visibility-v09">
+.frame-live-quote{display:flex;align-items:baseline;gap:9px 12px;flex-wrap:wrap;margin:12px 0 2px;padding:11px 13px;border:1px solid #d9e2ed;border-radius:14px;background:linear-gradient(135deg,#f4f7fb,#fff)}
+.frame-live-quote .price{font:900 23px ui-monospace,monospace;color:var(--charcoal,#182233);letter-spacing:-.04em}.frame-live-quote .change{font:900 15px ui-monospace,monospace}
+.frame-live-quote small{font-size:10px;color:#748196;margin-left:auto}.frame-live-quote button{margin-left:4px}
+.vantage-context .frame-live-quote{background:#fff;border-color:#d7e8e4;margin-top:10px}.quote-warning{font-size:10px;color:#748196;margin-top:6px}
+@media(max-width:650px){.frame-live-quote small{width:100%;margin-left:0}.frame-live-quote .price{font-size:21px}}
+</style>
+
 </head>
 
 
 <body>
-<header><div class="mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 12V7h5M20 7h5v5M25 20v5h-5M12 25H7v-5"/><path d="M10 18l4-4 3 2 5-6"/><circle cx="22" cy="10" r="2"/></svg></div><div><div class="brand">FRAME</div><div class="sub">Technical Decision Framework <span class="app-role-badge">WORKBENCH</span></div></div><div class="spacer"></div><div class="version">UI v0.8</div><div class="header-actions"><button class="icon help" onclick="openQuickGuide()" aria-label="使い方" title="使い方"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.9 1.9c-1 .8-1.7 1.2-1.7 2.6M12 17h.01"/></svg></button><button class="icon" onclick="openSettings()" aria-label="設定" title="設定"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.7-1.7.9-1.9-2.1-2.1-1.9.9-1.7-.7L10.5 2h-3l-.7 2-1.7.7-1.9-.9-2.1 2.1.9 1.9-.7 1.7-2 .7v3l2 .7.7 1.7-.9 1.9 2.1 2.1 1.9-.9 1.7.7.7 2h3l.7-2 1.7-.7 1.9.9 2.1-2.1-.9-1.9.7-1.7z" transform="translate(2.5 0) scale(.8)"/></svg></button></div></header>
+<header><div class="mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 12V7h5M20 7h5v5M25 20v5h-5M12 25H7v-5"/><path d="M10 18l4-4 3 2 5-6"/><circle cx="22" cy="10" r="2"/></svg></div><div><div class="brand">FRAME</div><div class="sub">Technical Decision Framework <span class="app-role-badge">WORKBENCH</span></div></div><div class="spacer"></div><div class="version">UI v0.9</div><div class="header-actions"><button class="icon help" onclick="openQuickGuide()" aria-label="使い方" title="使い方"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.9 1.9c-1 .8-1.7 1.2-1.7 2.6M12 17h.01"/></svg></button><button class="icon" onclick="openSettings()" aria-label="設定" title="設定"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7-.7-1.7.9-1.9-2.1-2.1-1.9.9-1.7-.7L10.5 2h-3l-.7 2-1.7.7-1.9-.9-2.1 2.1.9 1.9-.7 1.7-2 .7v3l2 .7.7 1.7-.9 1.9 2.1 2.1 1.9-.9 1.7.7.7 2h3l.7-2 1.7-.7 1.9.9 2.1-2.1-.9-1.9.7-1.7z" transform="translate(2.5 0) scale(.8)"/></svg></button></div></header>
 <nav class="tabs"><button class="active" data-tab="analyze" onclick="switchTab('analyze')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-4 3 2 5-6"/></svg><span>セットアップ</span></button><button data-tab="plans" onclick="switchTab('plans')"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>プラン</span></button><button data-tab="guide" onclick="switchTab('guide')"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 8h7M8 12h7"/></svg><span>ルール</span></button></nav>
 <div class="frame-flow" aria-label="FRAMEの操作順"><span><i>1</i>銘柄・モード</span><b>›</b><span><i>2</i>局面確認</span><b>›</b><span><i>3</i>打診・標準・追加</span><b>›</b><span><i>4</i>プラン保存</span></div>
 <main>
@@ -74,11 +83,11 @@ function contextNumber(v){if(v==null||String(v).trim()==='')return null;const n=
 function readVantageContext(){
  const q=new URLSearchParams(location.search);if(q.get('source')!=='vantage')return null;
  const market=q.get('market')==='jp'?'jp':q.get('market')==='us'?'us':null,symbol=normalSymbol(q.get('symbol'));if(!market||!symbol)return null;
- return{source:'VANTAGE',market,symbol,name:shortText(q.get('name'),100),mode:['new','pullback','hold'].includes(q.get('mode'))?q.get('mode'):'new',theme:shortText(q.get('theme'),80),theme_phase:shortText(q.get('theme_phase'),40),theme_code:shortText(q.get('theme_code'),40),propagation:shortText(q.get('propagation'),60),lane:shortText(q.get('lane'),8),lane_label:shortText(q.get('lane_label'),80),risk:shortText(q.get('risk'),80),scope:shortText(q.get('scope'),20),from:shortText(q.get('from'),30),setup:shortText(q.get('setup'),80),trade_date:shortText(q.get('trade_date'),20),rs5:contextNumber(q.get('rs5')),rs20:contextNumber(q.get('rs20')),vol_ratio:contextNumber(q.get('vol_ratio'))};
+ return{source:'VANTAGE',market,symbol,name:shortText(q.get('name'),100),mode:['new','pullback','hold'].includes(q.get('mode'))?q.get('mode'):'new',theme:shortText(q.get('theme'),80),theme_phase:shortText(q.get('theme_phase'),40),theme_code:shortText(q.get('theme_code'),40),propagation:shortText(q.get('propagation'),60),lane:shortText(q.get('lane'),8),lane_label:shortText(q.get('lane_label'),80),risk:shortText(q.get('risk'),80),scope:shortText(q.get('scope'),20),from:shortText(q.get('from'),30),setup:shortText(q.get('setup'),80),trade_date:shortText(q.get('trade_date'),20),rs5:contextNumber(q.get('rs5')),rs20:contextNumber(q.get('rs20')),vol_ratio:contextNumber(q.get('vol_ratio')),price:contextNumber(q.get('price')),change_pct:contextNumber(q.get('change_pct')),price_time:shortText(q.get('price_time'),40),quote_state:shortText(q.get('quote_state'),100)};
 }
 function renderVantageContext(){
  const e=$('vantage-context');if(!e)return;if(!vantageContext){e.innerHTML='';return}const c=vantageContext;
- e.innerHTML=`<div class="vantage-context"><div class="vantage-context-head"><span class="vantage-logo">V</span><div><div class="vantage-title">VANTAGEから引き継ぎ · ${esc(c.name||c.symbol)}</div><div class="muted">候補選定の文脈です。日本株の表示名もVANTAGEから引き継ぎ、FRAMEの価格構造・エントリー判定は独立して計算します。</div></div><span class="vantage-source">${esc(c.trade_date||'最新')} · ${esc(c.scope||'global')}</span></div><div class="plan-badges"><span class="pill context-theme">${esc(c.theme||'テーマ未設定')}</span><span class="pill context-phase">${esc(c.theme_phase||'段階未計算')}</span><span class="pill">${esc(c.propagation||'伝播判定待ち')}</span><span class="pill">候補 ${esc(c.lane||'D')} ${esc(c.lane_label||'')}</span></div><div class="vantage-grid"><div class="vantage-item"><b>${c.rs5==null?'—':pct(c.rs5)}</b><span>VANTAGE 市場差RS5</span></div><div class="vantage-item"><b>${c.rs20==null?'—':pct(c.rs20)}</b><span>VANTAGE 市場差RS20</span></div><div class="vantage-item"><b>${c.vol_ratio==null?'—':fmt(c.vol_ratio,2)+'x'}</b><span>VANTAGE出来高</span></div><div class="vantage-item"><b>${esc(c.risk||'—')}</b><span>世界地合い</span></div></div><div class="actions"><button class="secondary" onclick="openVantage()">VANTAGEへ戻る</button><button class="secondary" onclick="clearVantageContext()">引き継ぎ解除</button></div></div>`;
+ e.innerHTML=`<div class="vantage-context"><div class="vantage-context-head"><span class="vantage-logo">V</span><div><div class="vantage-title">VANTAGEから引き継ぎ · ${esc(c.name||c.symbol)}</div><div class="muted">候補選定の文脈です。日本株の表示名もVANTAGEから引き継ぎ、FRAMEの価格構造・エントリー判定は独立して計算します。</div></div><span class="vantage-source">${esc(c.trade_date||'最新')} · ${esc(c.scope||'global')}</span></div><div class="plan-badges"><span class="pill context-theme">${esc(c.theme||'テーマ未設定')}</span><span class="pill context-phase">${esc(c.theme_phase||'段階未計算')}</span><span class="pill">${esc(c.propagation||'伝播判定待ち')}</span><span class="pill">候補 ${esc(c.lane||'D')} ${esc(c.lane_label||'')}</span></div>${c.price!=null?`<div class="frame-live-quote"><b class="price">${framePriceText(c.price,c.market)}</b><span class="change ${c.change_pct==null?'warn':kind(c.change_pct)}">${pct(c.change_pct)}</span><small>${esc(c.quote_state||('取得 '+dateTimeText(c.price_time)+' · 遅延あり'))}</small></div>`:''}<div class="vantage-grid"><div class="vantage-item"><b>${c.rs5==null?'—':pct(c.rs5)}</b><span>VANTAGE 市場差RS5</span></div><div class="vantage-item"><b>${c.rs20==null?'—':pct(c.rs20)}</b><span>VANTAGE 市場差RS20</span></div><div class="vantage-item"><b>${c.vol_ratio==null?'—':fmt(c.vol_ratio,2)+'x'}</b><span>VANTAGE出来高</span></div><div class="vantage-item"><b>${esc(c.risk||'—')}</b><span>世界地合い</span></div></div><div class="actions"><button class="secondary" onclick="openVantage()">VANTAGEへ戻る</button><button class="secondary" onclick="clearVantageContext()">引き継ぎ解除</button></div></div>`;
 }
 function clearVantageContext(removeQuery=true){vantageContext=null;renderVantageContext();if(removeQuery)history.replaceState(null,'',location.pathname+location.hash)}
 function openVantage(){open(VANTAGE_URL,'_blank','noopener')}
@@ -94,6 +103,18 @@ function addRecent(m,s){const x={market:m,symbol:s},next=[x,...recentList().filt
 function renderRecent(){$('recent').innerHTML=recentList().map(x=>`<button onclick="runRecent('${x.market}','${attr(x.symbol)}')">${x.market==='jp'?'🇯🇵':'🇺🇸'} ${esc(x.symbol)}</button>`).join('')}
 function runRecent(m,s){$('market').value=m;$('symbol').value=s;analyze()}
 const fmt=(v,d=2)=>v==null||Number.isNaN(Number(v))?'—':Number(v).toLocaleString('ja-JP',{maximumFractionDigits:d}),pct=v=>v==null?'—':`${v>=0?'+':''}${Number(v).toFixed(1)}%`,kind=v=>v>0?'up':v<0?'down':'warn';
+const dateTimeText=v=>{if(!v)return'時刻不明';const d=new Date(v);return Number.isNaN(d.getTime())?'時刻不明':d.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});}
+function framePriceText(v,market){if(v==null||Number.isNaN(Number(v)))return'価格 —';return market==='jp'?fmt(v,0)+'円':'$'+fmt(v,2)}
+function frameQuoteData(d){
+ const q=d?.quote||{},daily=d?.frames?.daily||{},price=q.price??daily.close,change=q.change_pct??daily.change_pct,date=q.date??daily.date,time=q.price_time??d?.updated_at;
+ const stateText=q.close_confirmed?`${date||'最新'} 終値 · 更新 ${dateTimeText(time)}`:`取得 ${dateTimeText(time)} · 遅延あり`;
+ return{price,change,date,time,stateText};
+}
+function frameQuoteHtml(d,showButton=true){
+ const q=frameQuoteData(d),c=q.change==null?'warn':kind(q.change);
+ return `<div class="frame-live-quote"><b class="price">${framePriceText(q.price,d.market)}</b><span class="change ${c}">${pct(q.change)}</span><small>${esc(q.stateText)}</small>${showButton?'<button class="secondary" onclick="analyze()">価格・判定を更新</button>':''}</div><div class="quote-warning">場中価格はリアルタイムではありません。取得時刻を基準に確認してください。</div>`;
+}
+
 const modeLabel=m=>({new:'新規',pullback:'押し目',hold:'長期保有'}[m]||'新規');
 const holdLabel=s=>({HOLD:'保有継続可',CAUTION:'保有注意',REVIEW:'保有再評価'}[s]||s);
 function applyHandoffDisplayName(d){
@@ -112,7 +133,7 @@ function phaseHtml(p){if(!p)return'';const m=p.metrics||{},good=(p.reasons||[]).
 
 
 function renderAnalysis(d){const f=d.frames,s=d.setup,rs=d.relative_strength,v=d.volume,h=d.holding;const chips=[...(s.reasons||[]).map(x=>`<span class="pill good">${esc(x)}</span>`),...(s.risks||[]).map(x=>`<span class="pill bad">${esc(x)}</span>`),...(h.risks||[]).map(x=>`<span class="pill bad">保有: ${esc(x)}</span>`)].join('');$('analysis').innerHTML=`
-<div class="card hero"><div><div class="muted">${d.market==='jp'?'日本株':'米国株'} · ${esc(d.exchange||'')} · ${esc(d.symbol)}</div><h1>${esc(d.name)}</h1><div>${esc(d.diagnosis)} · 総合スコア ${fmt(d.score,1)}</div><div class="mode-note">${esc(modeMessage(d))}</div></div><div class="decision-grid"><div class="decision ${esc(d.entry_status)}"><small>新規エントリー</small><div class="big">${esc(entryStateLabel(d.entry_status))}</div></div><div class="decision ${esc(d.holding_status)}"><small>既存保有</small><div class="big">${esc(holdLabel(d.holding_status))}</div></div></div></div>
+<div class="card hero"><div><div class="muted">${d.market==='jp'?'日本株':'米国株'} · ${esc(d.exchange||'')} · ${esc(d.symbol)}</div><h1>${esc(d.name)}</h1>${frameQuoteHtml(d)}<div>${esc(d.diagnosis)} · 総合スコア ${fmt(d.score,1)}</div><div class="mode-note">${esc(modeMessage(d))}</div></div><div class="decision-grid"><div class="decision ${esc(d.entry_status)}"><small>新規エントリー</small><div class="big">${esc(entryStateLabel(d.entry_status))}</div></div><div class="decision ${esc(d.holding_status)}"><small>既存保有</small><div class="big">${esc(holdLabel(d.holding_status))}</div></div></div></div>
 ${phaseHtml(d.phase)}
 <div class="grid3">${tfCard(f.monthly)}${tfCard(f.weekly)}${tfCard(f.daily)}</div>
 <div class="card"><div class="metrics"><div class="metric"><b class="${kind(rs.rs5)}">${pct(rs.rs5)}</b><span>市場差RS5</span></div><div class="metric"><b class="${kind(rs.rs20)}">${pct(rs.rs20)}</b><span>市場差RS20</span></div><div class="metric"><b class="${kind(rs.rs60)}">${pct(rs.rs60)}</b><span>市場差RS60</span></div><div class="metric"><b>${fmt(v.ratio,2)}x</b><span>出来高比20日</span></div><div class="metric"><b>${fmt(f.daily.atr_pct,2)}%</b><span>ATR14 / 株価</span></div><div class="metric"><b>${pct(d.phase?.metrics?.drawdown60)}</b><span>60日高値乖離</span></div></div>${svgChart(d.chart)}</div>
@@ -130,7 +151,7 @@ async function deletePlan(id){if(!confirm('削除しますか？'))return;try{aw
 
 $('symbol').addEventListener('keydown',e=>{if(e.key==='Enter')analyze()});
 addEventListener('keydown',e=>{if(e.key==='Escape'){for(const id of ['settings','quick-guide']){const d=$(id);if(d?.open)d.close()}}});
-renderRecent();renderVantageContext();applyVantageHandoff();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=0.8.0').catch(()=>{});
+renderRecent();renderVantageContext();applyVantageHandoff();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=0.9.0').catch(()=>{});
 </script>
 </body>
 </html>
