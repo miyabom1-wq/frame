@@ -1,8 +1,12 @@
 import { nowIso, parseJson, normalizeSymbol } from '../utils.js';
+import { analyzeFrameItems } from './analysis.js';
 
 const KEY='frame:plans:v1';
 const VALID_ENTRY_STATUS=new Set(['UNSET','WAIT','READY','TRIGGERED','INVALID']);
 const VALID_TEMPLATE=new Set(['unset','reacceleration','reversal','pullback_complete']);
+const AUTO_ANALYSIS_VERSION='vantage-sync-v2';
+const AUTO_ANALYZE_LIMIT=20;
+const AUTO_RETRY_MS=15*60*1000;
 
 async function readRaw(env){return parseJson(await env.FRAME_KV.get(KEY),[])||[];}
 async function write(env,plans){await env.FRAME_KV.put(KEY,JSON.stringify(plans));return plans;}
@@ -37,14 +41,18 @@ function configuredPlan(plan={}){
     (Array.isArray(plan.checklist)&&plan.checklist.length)||String(plan.memo||'').trim()||
     (Array.isArray(plan.history)&&plan.history.length));
 }
+function hasAutoAnalysis(plan={}){return Boolean(plan.auto_analyzed_at);}
+function visibleStatus(plan={}){
+  if(!configuredPlan(plan)&&!hasAutoAnalysis(plan))return'UNSET';
+  return normalizeEntryStatus(plan.entry_status||plan.status,'WAIT');
+}
 
 function normalizePlan(plan={}){
   const linked=plan.linked_to_vantage===true;
   const configured=configuredPlan(plan);
   const lane=plan.source_context?.lane||plan.vantage_lane||'';
   const template=normalizeTemplate(plan.template,lane,plan.vantage_source);
-  const fallback=configured?'WAIT':'UNSET';
-  const entryStatus=normalizeEntryStatus(plan.entry_status||plan.status,fallback);
+  const entryStatus=visibleStatus(plan);
   return{
     ...plan,
     linked_to_vantage:linked,
@@ -52,20 +60,21 @@ function normalizePlan(plan={}){
     plan_configured:configured,
     template,
     template_label:templateLabel(template),
-    status:configured?entryStatus:'UNSET',
-    entry_status:configured?entryStatus:'UNSET'
+    status:entryStatus,
+    entry_status:entryStatus
   };
 }
 
 async function read(env){return(await readRaw(env)).map(normalizePlan);}
 
 function statusRecord(plan){
-  const status=plan.plan_configured?normalizeEntryStatus(plan.entry_status||plan.status,'WAIT'):'UNSET';
+  const status=visibleStatus(plan);
   return{
     id:plan.id,symbol:plan.symbol,market:plan.market,status,
     configured:!!plan.plan_configured,linked:!!plan.linked_to_vantage,
     template:plan.template||'unset',template_label:templateLabel(plan.template||'unset'),
-    updated_at:plan.updated_at||null
+    updated_at:plan.updated_at||null,auto_analyzed_at:plan.auto_analyzed_at||null,
+    auto_analysis_error:plan.auto_analysis_error||null
   };
 }
 function statusMap(plans){return Object.fromEntries(plans.filter(x=>x.linked_to_vantage).map(x=>[String(x.symbol||'').toUpperCase(),statusRecord(x)]));}
@@ -73,6 +82,61 @@ function statusMap(plans){return Object.fromEntries(plans.filter(x=>x.linked_to_
 function contextFromSync(raw,market,symbol,name){
   const source=raw.source_context&&typeof raw.source_context==='object'?raw.source_context:{};
   return normalizeSourceContext({...source,source:'VANTAGE',market,symbol,name,lane:raw.lane??source.lane,lane_label:raw.lane_label??source.lane_label,from:'watch'});
+}
+function sourceKey(plan={}){
+  const c=plan.source_context||{};
+  return JSON.stringify([
+    plan.market,plan.symbol,c.trade_date||'',c.price_time||'',c.price??null,c.change_pct??null,
+    c.rs5??null,c.rs20??null,c.vol_ratio??null,c.lane||'',c.setup||''
+  ]);
+}
+function retryBlocked(plan,nowMs){
+  if(!plan.auto_analysis_error_at)return false;
+  const failed=Date.parse(plan.auto_analysis_error_at)||0;
+  return nowMs-failed<AUTO_RETRY_MS&&plan.auto_analysis_error_source_key===sourceKey(plan);
+}
+function needsAutoAnalysis(plan,nowMs=Date.now()){
+  if(!plan.linked_to_vantage)return false;
+  const key=sourceKey(plan);
+  if(plan.auto_analysis_version!==AUTO_ANALYSIS_VERSION)return true;
+  if(!plan.auto_analyzed_at)return !retryBlocked(plan,nowMs);
+  if(plan.auto_analyzed_source_key!==key)return !retryBlocked(plan,nowMs);
+  return false;
+}
+function appendStatusHistory(plan,from,to,at){
+  const history=Array.isArray(plan.analysis_history)?[...plan.analysis_history]:[];
+  if(from!==to)history.push({at,from,to,source:'vantage-auto-analysis'});
+  return history.slice(-30);
+}
+function applyAnalysis(plan,analysis,at){
+  const before=visibleStatus(plan),after=normalizeEntryStatus(analysis.entry_status,'WAIT'),setup=analysis.setup||{},entries=setup.entries||{};
+  return{
+    ...plan,
+    status:after,entry_status:after,holding_status:String(analysis.holding_status||plan.holding_status||'HOLD'),
+    diagnosis:analysis.diagnosis||null,phase:analysis.phase||null,entries:entries||null,
+    entry:entries.standard||setup.entry||null,stop:entries.standard?.stop||setup.stop||null,
+    invalidation:setup.invalidation||null,checklist:Array.isArray(setup.checklist)?setup.checklist:[],
+    auto_quote:analysis.quote||null,auto_score:analysis.score??null,auto_methodology:analysis.methodology||null,
+    auto_analyzed_at:at,auto_analyzed_source_key:sourceKey(plan),auto_analysis_version:AUTO_ANALYSIS_VERSION,
+    auto_analysis_error:null,auto_analysis_error_at:null,auto_analysis_error_source_key:null,
+    analysis_history:appendStatusHistory(plan,before,after,at),updated_at:at,
+    plan_configured:configuredPlan(plan)
+  };
+}
+async function autoAnalyzeLinked(plans,body={}){
+  const now=nowIso();
+  if(body.auto_analyze===false)return{plans,summary:{enabled:false,requested:0,updated:0,failed:0,pending:plans.filter(x=>needsAutoAnalysis(x)).length}};
+  const candidates=plans.filter(x=>needsAutoAnalysis(x)).sort((a,b)=>(Date.parse(a.auto_analyzed_at||0)||0)-(Date.parse(b.auto_analyzed_at||0)||0));
+  const selected=candidates.slice(0,AUTO_ANALYZE_LIMIT),results=await analyzeFrameItems(selected.map(plan=>({id:plan.id,market:plan.market,symbol:plan.symbol,name:plan.name})),{concurrency:4,cacheTtl:300});
+  const byId=new Map(results.map(r=>[r.item.id,r])),updated=[];let ok=0,failed=0;
+  for(const plan of plans){
+    const result=byId.get(plan.id);
+    if(!result){updated.push(plan);continue;}
+    if(result.ok){updated.push(applyAnalysis(plan,result.analysis,now));ok++;continue;}
+    failed++;
+    updated.push({...plan,auto_analysis_error:contextText(result.error,240),auto_analysis_error_at:now,auto_analysis_error_source_key:sourceKey(plan)});
+  }
+  return{plans:updated,summary:{enabled:true,requested:selected.length,updated:ok,failed,pending:Math.max(0,candidates.length-selected.length),limit:AUTO_ANALYZE_LIMIT,version:AUTO_ANALYSIS_VERSION}};
 }
 
 async function syncVantage(env,plans,body){
@@ -85,19 +149,18 @@ async function syncVantage(env,plans,body){
     const name=contextText(raw.name||previous?.name||symbol,100),lane=contextText(raw.lane||raw.source_context?.lane,8),source=contextText(raw.source||'watch',30);
     const suggested=normalizeTemplate(raw.template,lane,source),configured=previous?configuredPlan(previous):false;
     const template=configured?normalizeTemplate(previous.template,lane,source):suggested;
-    const sourceContext=contextFromSync(raw,market,symbol,name);
+    const sourceContext=contextFromSync(raw,market,symbol,name),previousStatus=previous?visibleStatus(previous):'UNSET';
     const linked={
       ...(previous||{}),id,market,symbol,name,
-      mode:configured?(previous.mode||modeFromTemplate(template)):modeFromTemplate(template),
-      status:configured?normalizeEntryStatus(previous.entry_status||previous.status,'WAIT'):'UNSET',
-      entry_status:configured?normalizeEntryStatus(previous.entry_status||previous.status,'WAIT'):'UNSET',
+      mode:configured?(previous.mode||modeFromTemplate(template)):(previous?.mode||modeFromTemplate(template)),
+      status:previousStatus,entry_status:previousStatus,
       holding_status:previous?.holding_status||'HOLD',
       template,template_label:templateLabel(template),plan_configured:configured,
       linked_to_vantage:true,vantage_link_state:'linked',vantage_watch_id:contextText(raw.watch_id||raw.id,80),
       vantage_status:contextText(raw.watch_status||raw.status,30),vantage_memo:contextText(raw.memo,500),vantage_source:source,
       vantage_lane:lane,vantage_synced_at:now,vantage_unlinked_at:null,
       source_context:sourceContext||previous?.source_context||null,
-      memo:previous?.memo||'',updated_at:configured?(previous.updated_at||now):now,created_at:previous?.created_at||now
+      memo:previous?.memo||'',updated_at:previous?.updated_at||now,created_at:previous?.created_at||now
     };
     if(idx>=0)next[idx]=linked;else next.push(linked);seen.add(id);
   }
@@ -108,13 +171,15 @@ async function syncVantage(env,plans,body){
     if(!plan.linked_to_vantage||seen.has(plan.id)){cleaned.push(plan);continue;}
     if(configuredPlan(plan))cleaned.push({...plan,linked_to_vantage:false,vantage_link_state:'detached',vantage_unlinked_at:now,vantage_watch_id:null,vantage_synced_at:now});
   }
-  await write(env,cleaned);
-  return{ok:true,schema:'vantage-watch-sync-v1',synced_at:now,received:incoming.length,linked:cleaned.filter(x=>x.linked_to_vantage).length,detached:cleaned.filter(x=>x.vantage_link_state==='detached').length,statuses:statusMap(cleaned),plans:cleaned};
+  const auto=await autoAnalyzeLinked(cleaned,body),finalPlans=auto.plans.map(normalizePlan);
+  await write(env,finalPlans);
+  return{ok:true,schema:'vantage-watch-sync-v2',synced_at:now,received:incoming.length,linked:finalPlans.filter(x=>x.linked_to_vantage).length,detached:finalPlans.filter(x=>x.vantage_link_state==='detached').length,statuses:statusMap(finalPlans),auto_analysis:auto.summary,plans:finalPlans};
 }
 
 export async function getPlans(env){
-  const plans=await read(env);
-  return{ok:true,plans,sync:{linked:plans.filter(x=>x.linked_to_vantage).length,unconfigured:plans.filter(x=>x.linked_to_vantage&&!x.plan_configured).length,detached:plans.filter(x=>x.vantage_link_state==='detached').length,statuses:statusMap(plans)}};
+  const plans=await read(env),linked=plans.filter(x=>x.linked_to_vantage);
+  const autoTimes=linked.map(x=>x.auto_analyzed_at).filter(Boolean).sort();
+  return{ok:true,plans,sync:{linked:linked.length,unconfigured:linked.filter(x=>!x.plan_configured).length,detached:plans.filter(x=>x.vantage_link_state==='detached').length,statuses:statusMap(plans),auto_pending:linked.filter(x=>needsAutoAnalysis(x)).length,auto_errors:linked.filter(x=>x.auto_analysis_error).length,last_auto_analysis_at:autoTimes.at(-1)||null,auto_analysis_version:AUTO_ANALYSIS_VERSION}};
 }
 
 export async function mutatePlans(env,body={}){
@@ -126,7 +191,7 @@ export async function mutatePlans(env,body={}){
     const sourceContext=body.source_context===null?null:(normalizeSourceContext(body.source_context)||previous?.source_context||null);
     const template=normalizeTemplate(body.template||previous?.template,sourceContext?.lane||previous?.vantage_lane,previous?.vantage_source);
     const item={
-      id,market,symbol,name:String(body.name||previous?.name||symbol),
+      ...(previous||{}),id,market,symbol,name:String(body.name||previous?.name||symbol),
       mode:['new','pullback','hold'].includes(body.mode)?body.mode:(previous?.mode||modeFromTemplate(template)),
       status:entryStatus,entry_status:entryStatus,
       holding_status:String(body.holding_status||previous?.holding_status||'HOLD'),diagnosis:body.diagnosis||previous?.diagnosis||null,
