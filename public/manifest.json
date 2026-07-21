@@ -1,8 +1,8 @@
 {
   "name": "FRAME — Technical Decision Workbench",
   "short_name": "FRAME",
-  "description": "VANTAGE候補をカード一覧から選び、個別銘柄の局面・段階エントリー・無効化条件を整理",
-  "start_url": "./?v=0.15",
+  "description": "VANTAGE候補を選び、仕掛け順・局面・段階エントリー・無効化条件を整理",
+  "start_url": "./?v=0.16",
   "display": "standalone",
   "background_color": "#eef2f6",
   "theme_color": "#111b2b",
