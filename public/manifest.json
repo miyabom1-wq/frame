@@ -2,7 +2,7 @@
   "name": "FRAME — Technical Decision Workbench",
   "short_name": "FRAME",
   "description": "日本株と米国株を分け、VANTAGE候補・仕掛け順・段階エントリーを整理",
-  "start_url": "./?v=0.17",
+  "start_url": "./?v=0.18",
   "display": "standalone",
   "background_color": "#eef2f6",
   "theme_color": "#111b2b",
